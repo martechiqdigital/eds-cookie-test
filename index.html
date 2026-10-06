@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EDS iFrame Content (Simulated acquire1.comenity.net)</title>
+<script src="https://assets.adobedtm.com/6851bdae8e57/6e50eca62bb4/launch-4a2a33e3323c-development.min.js" async></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',Arial,sans-serif;padding:20px;background:#f8f9fa;color:#1e293b;font-size:13px}
+h2{font-size:16px;margin-bottom:12px;color:#0C2340}
+.status{border-radius:8px;padding:14px;margin:10px 0;font-size:12px;line-height:1.6}
+.status.pass{background:#e8f5e9;border-left:4px solid #16a34a;color:#166534}
+.status.fail{background:#fdeded;border-left:4px solid #dc2626;color:#991b1b}
+.status.info{background:#eff6ff;border-left:4px solid #2563eb;color:#1e40af}
+.cookie-log{background:#0f172a;color:#4BBEB4;border-radius:8px;padding:14px;margin:10px 0;font-family:'Courier New',monospace;font-size:11px;line-height:1.8;max-height:300px;overflow-y:auto;white-space:pre-wrap}
+table{width:100%;border-collapse:collapse;font-size:11px;margin:10px 0}
+th{background:#0C2340;color:#fff;padding:6px 8px;text-align:left;font-size:10px}
+td{padding:6px 8px;border:1px solid #e2e8f0}
+tr:nth-child(even){background:#f0f4f8}
+.label{font-weight:700;color:#0C2340}
+button{background:#0C2340;color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:11px;margin:4px 4px 4px 0}
+button:hover{background:#163560}
+</style>
+</head>
+<body>
+
+<h2>iFrame Content (Simulated EDS Modal)</h2>
+<div class="status info">This page simulates the Bread Financial acquisition flow loaded inside an EDS modal. It is hosted on a different domain than the parent page to replicate the cross-origin iFrame behavior.</div>
+
+<h3 style="margin:16px 0 8px;font-size:13px">Cookie Diagnostic</h3>
+<div id="cookie-status"></div>
+
+<h3 style="margin:16px 0 8px;font-size:13px">Current Cookies on This Domain</h3>
+<div class="cookie-log" id="cookie-log">Checking...</div>
+
+<h3 style="margin:16px 0 8px;font-size:13px">Adobe Target Status</h3>
+<div id="target-status" class="status info">Waiting for Adobe Target to initialize...</div>
+
+<h3 style="margin:16px 0 8px;font-size:13px">Adobe Analytics Status</h3>
+<div id="analytics-status" class="status info">Waiting for Adobe Analytics to initialize...</div>
+
+<h3 style="margin:16px 0 8px;font-size:13px">All Console Messages (Adobe)</h3>
+<div class="cookie-log" id="console-log">Listening...</div>
+
+<h3 style="margin:16px 0 8px;font-size:13px">Actions</h3>
+<button onclick="testCookieWrite()">Test Cookie Write</button>
+<button onclick="requestStorageAccess()">Test Storage Access API</button>
+<button onclick="refreshDiagnostics()">Refresh Diagnostics</button>
+
+<script>
+var consoleMessages = [];
+var originalConsoleLog = console.log;
+var originalConsoleWarn = console.warn;
+var originalConsoleError = console.error;
+
+function interceptConsole(type, original) {
+  return function() {
+    var args = Array.prototype.slice.call(arguments);
+    var msg = args.map(function(a) { return typeof a === 'object' ? JSON.stringify(a) : String(a); }).join(' ');
+    if (msg.toLowerCase().indexOf('adobe') > -1 || msg.toLowerCase().indexOf('at:') > -1 ||
+        msg.toLowerCase().indexOf('target') > -1 || msg.toLowerCase().indexOf('mbox') > -1 ||
+        msg.toLowerCase().indexOf('visitor') > -1 || msg.toLowerCase().indexOf('analytics') > -1 ||
+        msg.toLowerCase().indexOf('launch') > -1 || msg.toLowerCase().indexOf('dtm') > -1 ||
+        msg.toLowerCase().indexOf('alloy') > -1 || msg.toLowerCase().indexOf('cookie') > -1 ||
+        msg.toLowerCase().indexOf('disabled') > -1) {
+      consoleMessages.push('[' + type.toUpperCase() + '] ' + msg);
+      updateConsoleLog();
+    }
+    original.apply(console, arguments);
+  };
+}
+
+console.log = interceptConsole('log', originalConsoleLog);
+console.warn = interceptConsole('warn', originalConsoleWarn);
+console.error = interceptConsole('error', originalConsoleError);
+
+function updateConsoleLog() {
+  var el = document.getElementById('console-log');
+  if (consoleMessages.length === 0) {
+    el.textContent = 'No Adobe-related console messages yet...';
+  } else {
+    el.textContent = consoleMessages.join('\n');
+  }
+  el.scrollTop = el.scrollHeight;
+}
+
+function checkCookies() {
+  var cookies = document.cookie;
+  var cookieLog = document.getElementById('cookie-log');
+  var statusEl = document.getElementById('cookie-status');
+
+  if (!cookies || cookies.trim() === '') {
+    cookieLog.textContent = '(no cookies found on this domain)';
+    statusEl.innerHTML = '<div class="status fail"><span class="label">Cookie Access:</span> No cookies detected. The browser is likely blocking cookie creation in this iFrame context.</div>';
+  } else {
+    var pairs = cookies.split(';').map(function(c) { return c.trim(); });
+    cookieLog.textContent = pairs.join('\n');
+
+    var hasMbox = cookies.indexOf('mbox') > -1;
+    var hasAtCheck = cookies.indexOf('at_check') > -1;
+    var hasAMCV = cookies.indexOf('AMCV_') > -1;
+
+    var html = '<table><tr><th>Cookie</th><th>Present</th><th>Meaning</th></tr>';
+    html += '<tr><td class="label">mbox</td><td>' + (hasMbox ? '<span style="color:#16a34a;font-weight:700">Yes</span>' : '<span style="color:#dc2626;font-weight:700">No</span>') + '</td><td>' + (hasMbox ? 'Target can deliver experiences.' : 'Target will disable content delivery.') + '</td></tr>';
+    html += '<tr><td class="label">AMCV_</td><td>' + (hasAMCV ? '<span style="color:#16a34a;font-weight:700">Yes</span>' : '<span style="color:#dc2626;font-weight:700">No</span>') + '</td><td>' + (hasAMCV ? 'Visitor ID Service cookie present.' : 'Visitor ID Service cookie not set. Identity may come from adobe_mc param.') + '</td></tr>';
+    html += '</table>';
+
+    if (hasMbox) {
+      html += '<div class="status pass"><span class="label">Result:</span> Cookies are being set. Adobe Target should work in this context.</div>';
+    } else {
+      html += '<div class="status fail"><span class="label">Result:</span> mbox cookie not found. Adobe Target will disable content delivery.</div>';
+    }
+    statusEl.innerHTML = html;
+  }
+}
+
+function testCookieWrite() {
+  document.cookie = 'eds_test_cookie=true; path=/; SameSite=None; Secure';
+  var success = document.cookie.indexOf('eds_test_cookie') > -1;
+  var statusEl = document.getElementById('cookie-status');
+
+  if (success) {
+    statusEl.innerHTML = '<div class="status pass"><span class="label">Cookie Write Test:</span> Successfully wrote and read back a test cookie. Third-party cookies are NOT blocked in this context.</div>';
+    document.cookie = 'eds_test_cookie=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
+  } else {
+    statusEl.innerHTML = '<div class="status fail"><span class="label">Cookie Write Test:</span> Failed to write a test cookie. Third-party cookies ARE blocked. This is the root cause of the Target issue.</div>';
+  }
+  checkCookies();
+}
+
+function requestStorageAccess() {
+  if (!document.requestStorageAccess) {
+    document.getElementById('cookie-status').innerHTML = '<div class="status fail"><span class="label">Storage Access API:</span> Not supported in this browser.</div>';
+    return;
+  }
+  document.requestStorageAccess().then(function() {
+    document.getElementById('cookie-status').innerHTML = '<div class="status pass"><span class="label">Storage Access API:</span> Access granted! Cookies should now be accessible. Click "Refresh Diagnostics" to verify.</div>';
+  }).catch(function(err) {
+    document.getElementById('cookie-status').innerHTML = '<div class="status fail"><span class="label">Storage Access API:</span> Access denied. Error: ' + err.message + '</div>';
+  });
+}
+
+function checkTargetStatus() {
+  var el = document.getElementById('target-status');
+  if (window.adobe && window.adobe.target) {
+    el.className = 'status pass';
+    el.innerHTML = '<span class="label">Adobe Target:</span> Initialized successfully. window.adobe.target is available.';
+  } else if (window.targetGlobalSettings) {
+    el.className = 'status info';
+    el.innerHTML = '<span class="label">Adobe Target:</span> targetGlobalSettings found, but Target may not have fully initialized. Check console messages below.';
+  } else {
+    var hasDisabledMsg = consoleMessages.some(function(m) { return m.indexOf('content delivery is disabled') > -1; });
+    if (hasDisabledMsg) {
+      el.className = 'status fail';
+      el.innerHTML = '<span class="label">Adobe Target:</span> Content delivery DISABLED. The cookie pre-flight check failed. This confirms the issue.';
+    } else {
+      el.className = 'status info';
+      el.innerHTML = '<span class="label">Adobe Target:</span> Not yet detected. Library may still be loading.';
+    }
+  }
+}
+
+function checkAnalyticsStatus() {
+  var el = document.getElementById('analytics-status');
+  if (window.s && window.s.version) {
+    el.className = 'status pass';
+    el.innerHTML = '<span class="label">Adobe Analytics (AppMeasurement):</span> Loaded. Version: ' + window.s.version;
+  } else if (window.s_gi) {
+    el.className = 'status pass';
+    el.innerHTML = '<span class="label">Adobe Analytics:</span> s_gi function available. AppMeasurement loaded.';
+  } else {
+    el.className = 'status info';
+    el.innerHTML = '<span class="label">Adobe Analytics:</span> Not yet detected. Library may still be loading.';
+  }
+}
+
+function refreshDiagnostics() {
+  checkCookies();
+  checkTargetStatus();
+  checkAnalyticsStatus();
+}
+
+// Run diagnostics after page load and then periodically
+window.addEventListener('load', function() {
+  setTimeout(refreshDiagnostics, 2000);
+  setTimeout(refreshDiagnostics, 5000);
+  setTimeout(refreshDiagnostics, 10000);
+});
+
+// Initial check
+setTimeout(refreshDiagnostics, 1000);
+</script>
+
+</body>
+</html>
